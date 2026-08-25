@@ -17,8 +17,10 @@
 
 # --- CONFIGURACAO -----------------------------------------------------
 
-# Caminho do executavel do Docker Desktop (padrao de instalacao):
-$dockerPath = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+# Caminho do executavel do Docker Desktop. O instalador mais recente
+# instala por usuario, em %LOCALAPPDATA%\Programs\DockerDesktop (nao mais
+# em Program Files) — confira onde esta o seu antes de rodar o script.
+$dockerPath = "$env:LOCALAPPDATA\Programs\DockerDesktop\Docker Desktop.exe"
 
 # Caminho do executavel do VSCode (padrao de instalacao por usuario):
 $vscodePath = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
