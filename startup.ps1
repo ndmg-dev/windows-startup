@@ -5,7 +5,8 @@
     1. Docker Desktop (primeiro, porque demora a subir)
     2. VSCode
     3. App desktop do Claude
-    4. Chrome no perfil de trabalho, direto na URL do CRM
+    4. Chrome, uma ou mais janelas, cada uma em um perfil, cada uma com
+       uma ou mais URLs abertas como abas
     5. Code Watcher (https://github.com/ndmg-dev/CodeWatcher), se instalado
 
     CONFIGURACAO:
@@ -33,13 +34,31 @@ $claudeAppId = "<PREENCHER: AppUserModelId do Claude desktop>"
 # Caminho do executavel do Chrome:
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 
-# Nome da pasta de perfil do Chrome a usar (descobrir abrindo
-# chrome://version no perfil desejado, campo "Caminho do perfil" —
-# o nome da ultima pasta, ex.: "Profile 3", "Default"):
-$chromeProfile = "<PREENCHER: nome da pasta de perfil do Chrome>"
-
-# URL a abrir no Chrome ao iniciar (ex.: o CRM interno da sua empresa):
-$crmUrl = "<PREENCHER: URL a abrir no boot>"
+# Janelas do Chrome a abrir no boot. Cada item vira uma janela separada,
+# no perfil indicado, com todas as URLs listadas abertas como abas dessa
+# mesma janela (o Chrome aceita multiplas URLs na mesma chamada).
+#
+# Nome da pasta de perfil (Profile): descubra abrindo chrome://version no
+# perfil desejado, campo "Caminho do perfil" — o nome da ultima pasta
+# (ex.: "Profile 3", "Default"). Tambem da para conferir em
+# %LOCALAPPDATA%\Google\Chrome\User Data\Local State (JSON), campo
+# profile.info_cache, que mapeia cada "Profile N" para o email da conta.
+$chromeWindows = @(
+    @{
+        Profile = "<PREENCHER: nome da pasta de perfil do Chrome, ex. Profile 3>"
+        Urls    = @(
+            "<PREENCHER: URL a abrir no boot, ex. o CRM interno da sua empresa>"
+        )
+    }
+    # Exemplo de uma segunda janela, em outro perfil, com varias abas:
+    # @{
+    #     Profile = "<PREENCHER: nome da pasta de perfil do Chrome, ex. Profile 2>"
+    #     Urls    = @(
+    #         "<PREENCHER: URL 1>"
+    #         "<PREENCHER: URL 2>"
+    #     )
+    # }
+)
 
 # Segundos de espera apos abrir o Docker, antes de seguir com o resto
 # (Docker demora para inicializar o daemon):
@@ -132,12 +151,17 @@ try {
     Write-Warning "Nao foi possivel abrir o Claude via AppsFolder. Verifique `$claudeAppId no script."
 }
 
-# 4. Chrome no perfil de trabalho, direto na URL configurada
+# 4. Chrome, uma janela por perfil configurado em $chromeWindows, cada uma
+# com suas URLs abertas como abas.
 # De proposito SEM checagem de "ja rodando": se o Chrome ja estiver aberto,
-# isso apenas abre a aba na janela existente, que e o comportamento
-# desejado — nao abre um segundo Chrome.
-$chromeArgs = "--profile-directory=`"$chromeProfile`" `"$crmUrl`""
-Start-AppIfExists -Path $chromePath -Arguments $chromeArgs -Label "Chrome (perfil: $chromeProfile)" | Out-Null
+# isso apenas abre as abas na janela existente do perfil (ou uma nova janela
+# do perfil, se ainda nao tinha uma aberta) — nao abre um segundo processo
+# do Chrome indevidamente.
+foreach ($window in $chromeWindows) {
+    $urlArgs = ($window.Urls | ForEach-Object { "`"$_`"" }) -join " "
+    $chromeArgs = "--profile-directory=`"$($window.Profile)`" $urlArgs"
+    Start-AppIfExists -Path $chromePath -Arguments $chromeArgs -Label "Chrome (perfil: $($window.Profile))" | Out-Null
+}
 
 # 5. Code Watcher — sobe na bandeja E abre o painel junto com os outros apps.
 # A flag --show e o que faz a janela aparecer no boot; sem ela o app fica so
